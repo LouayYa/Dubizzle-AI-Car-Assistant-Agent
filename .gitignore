@@ -1,0 +1,27 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Runtime data (created on first run)
+data/app.db
+data/leads.csv
+
+# Enrichment resume caches (regenerable; large)
+data/.enrich_cache.json
+data/.embed_cache.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Streamlit
+.streamlit/secrets.toml
+
