@@ -2,15 +2,14 @@
 
 A conversational assistant for the dubizzle used-cars marketplace. It searches
 **real** inventory, answers follow-up questions about specific listings,
-remembers a user across sessions, books viewings, and captures qualified leads
-— while staying strictly on-topic (cars only, no competitor talk).
+remembers a user across sessions, books viewings, and captures qualified leads, while staying strictly on-topic (cars only, no competitor talk).
 
 **Stack:** FastAPI (async backend) · LiteLLM → Google Gemini (agent + tool
 calling) · Streamlit (chat UI) · SQLite via SQLAlchemy (long-term memory) ·
 precomputed embeddings cache (semantic search). Managed with **`uv`**.
 
 > **Grounding rule (enforced):** the agent can only present cars returned by a
-> tool call against the real dataset — it never invents listings, prices,
+> tool call against the real dataset; It never invents listings, prices,
 > mileage, or specs. Unknown values are surfaced honestly ("price not listed",
 > "finance only").
 
@@ -57,18 +56,21 @@ uv run pytest                             # test suite (offline, no API calls)
 
 ## 2. Why these choices
 
-**Streamlit over a notebook** — a real, stateful chat UI with card-rendered
+**Streamlit over a notebook**: a real, stateful chat UI with card-rendered
 results in one small file. It talks to the backend purely over HTTP and makes
-**no LLM calls itself**, keeping a clean client/server boundary. **A
-lightweight FastAPI + LiteLLM agent loop over a heavier framework** (e.g.
-LangChain) keeps the whole agent as one short, auditable loop — build a system
+**no LLM calls itself**, keeping a clean client/server boundary.
+
+**A lightweight FastAPI + LiteLLM agent loop over a heavier framework** (e.g.
+LangChain) keeps the whole agent as one short, auditable loop. It builds a system
 prompt, send history + tool schemas to Gemini, run any tool calls, feed
-results back — which makes the grounding guarantee easy to see and trust.
+results back, which makes the grounding guarantee easy to see and trust.
+
 **Hybrid retrieval** combines a structured SQL filter (exact constraints like
 budget, mileage, body type) with **semantic embedding search** (vibe queries
 like "sporty" or "family SUV"); when both are present it filters structurally
 first, then ranks the survivors by similarity, so an expensive embedding
 comparison never runs over rows a `WHERE` clause could already exclude.
+
 **Memory** uses **SQLite** for durable long-term data (users, preferences,
 liked cars, bookings) and an **in-process dict** for hot, per-session
 short-term context — one file, one process, zero external services.
@@ -77,7 +79,7 @@ short-term context — one file, one process, zero external services.
 
 ## 3. How it works
 
-**Design decisions.** The dataset ships with **no Price or Mileage column** —
+**Design decisions** - The dataset ships with **no Price or Mileage column**,
 those live inside messy, sometimes-Arabic, HTML-laden `description` text. A
 one-time offline **enrichment** pass ([`scripts/enrich.py`](scripts/enrich.py))
 extracts structured fields (LLM + regex fallback) and precomputes one
@@ -87,7 +89,7 @@ exposes nine in-process tools (`search_inventory`, `semantic_search`,
 `get_listing_details`, `book_viewing`, `cancel_booking`, `get_user_bookings`,
 `save_lead`, `get_user_profile`, `update_user_profile`); because the client only
 ever receives cars that came back from a tool, hallucinated listings are
-structurally impossible — and the agent must call `get_user_bookings` before
+structurally impossible. In addition, the agent must call `get_user_bookings` before
 answering any "do I have a booking?" question rather than guessing.
 Short-term memory tracks the last-shown cars so follow-ups like "the first
 one" or "is there a warranty on it?" resolve without restating; durable
@@ -98,8 +100,8 @@ pre-check on the **user's message**, the system prompt, and a post-check on the
 **model's reply** (so a competitor name can't slip through even if the model
 volunteers one).
 
-**Out of scope / future work.** The in-process tools are deliberately
-framework-free functions with JSON schemas, so they could be exposed as an
+**Out of scope / future work** - The in-process tools are deliberately 
+framework-free functions with JSON schemas, so they could be exposed as an 
 **MCP (FastMCP) server** to let multiple agents/clients share one grounded
 tool layer. Long-term memory is fine in SQLite for a prototype but at
 multi-tenant scale would move to a managed store such as **Vertex AI Memory
